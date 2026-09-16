@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>JP Chawarma - Menu</title>
 <style>
+
   :root{
     --bg: #121212;
     --bg-card: #1c1c1c;
@@ -63,6 +64,7 @@
     font-size: 0.85rem; color: var(--text-dim); line-height:1.6;
   }
   .contact strong{ color: var(--text); }
+  .contact a, footer a{ color:inherit; text-decoration:none; }
 
   nav.chips{
     display:flex; gap:8px; overflow-x:auto; padding: 14px 16px; position:sticky; top:0;
@@ -490,10 +492,10 @@
 <footer>
   <div class="bon-appetit">Bon appétit 😋</div>
   <div id="qrbox">
-    <div id="qrcode"></div>
+    <img id="qrcode" src="qr-code.png" alt="QR code du menu JP Chawarma" width="140" height="140">
     <p>Scannez pour retrouver ce menu</p>
   </div>
-  <p style="margin-top:20px; color:var(--text-dim); font-size:0.8rem;">JP Chawarma · Cocotomey · +229 01 56 99 03 18</p>
+  <p style="margin-top:20px; color:var(--text-dim); font-size:0.8rem;">JP Chawarma · Cocotomey · <a href="tel:+2290156990318">+229 01 56 99 03 18</a></p>
 </footer>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -526,18 +528,6 @@
       });
     }, { rootMargin: '-40% 0px -50% 0px', threshold: 0 });
     sections.forEach(s => navIo.observe(s));
-  }
-
-  try {
-    new QRCode(document.getElementById("qrcode"), {
-      text: window.location.href,
-      width: 140,
-      height: 140,
-      colorDark: "#121212",
-      colorLight: "#ffffff"
-    });
-  } catch(e) {
-    document.getElementById("qrbox").style.display = "none";
   }
 </script>
 
