@@ -89,6 +89,32 @@
   }
   nav.chips a:hover{ border-color: var(--orange); color: var(--orange); }
 
+
+  .menu-tools{display:flex;gap:10px;align-items:center;position:sticky;top:58px;z-index:9;padding:12px 0;background:var(--bg);}
+  .search-box{flex:1;display:flex;align-items:center;gap:8px;background:var(--bg-card);border:1px solid var(--line);border-radius:12px;padding:0 12px;}
+  .search-box span{font-size:1rem;color:var(--text-dim);}
+  #menu-search{width:100%;border:0;outline:0;background:transparent;color:var(--text);font:500 .9rem var(--font-body);padding:12px 0;}
+  #menu-search::placeholder{color:var(--text-dim);}
+  .cart-button{border:0;border-radius:12px;background:var(--orange);color:#fff;font:700 .82rem var(--font-body);padding:12px 14px;cursor:pointer;white-space:nowrap;box-shadow:0 5px 14px rgba(232,89,12,.25);}
+  .cart-count{display:inline-flex;min-width:20px;height:20px;align-items:center;justify-content:center;margin-left:4px;border-radius:50%;background:#fff;color:var(--orange);font-size:.72rem;}
+  .item{cursor:pointer;}
+  .item.added{background:rgba(232,89,12,.10);border-radius:6px;}
+  .empty-search{display:none;text-align:center;color:var(--text-dim);padding:24px 10px;font-size:.9rem;}
+  .cart-panel{position:fixed;inset:0;z-index:30;display:none;background:rgba(0,0,0,.58);}
+  .cart-panel.open{display:flex;align-items:flex-end;justify-content:center;}
+  .cart-card{width:min(560px,100%);max-height:86vh;overflow:auto;background:var(--bg-card);color:var(--text);border:1px solid var(--line);border-radius:20px 20px 0 0;padding:20px;box-shadow:0 -12px 40px rgba(0,0,0,.35);}
+  .cart-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px;}
+  .cart-head h2{margin:0;color:var(--gold);font-size:1.25rem;}
+  .cart-close{border:0;background:transparent;color:var(--text-dim);font-size:1.5rem;cursor:pointer;}
+  .cart-row{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center;padding:10px 0;border-bottom:1px dotted var(--line);font-size:.86rem;}
+  .cart-row-name{font-weight:600;}
+  .qty-controls{display:flex;align-items:center;gap:7px;}
+  .qty-controls button{width:26px;height:26px;border:1px solid var(--line);border-radius:7px;background:var(--bg);color:var(--text);cursor:pointer;}
+  .cart-total{display:flex;justify-content:space-between;margin:18px 0;font-weight:800;color:var(--gold);}
+  .whatsapp-order{width:100%;border:0;border-radius:10px;background:#1f9d55;color:#fff;padding:13px;font:700 .9rem var(--font-body);cursor:pointer;}
+  .cart-empty{text-align:center;color:var(--text-dim);padding:18px 0;}
+  @media(max-width:520px){.menu-tools{top:52px}.cart-button{padding:12px 10px}.cart-button .cart-label{display:none}.cart-row{grid-template-columns:1fr auto}.cart-row > strong{grid-column:2;grid-row:1}.qty-controls{grid-column:1 / -1;justify-content:flex-end;}}
+
   main{ max-width: 760px; margin: 0 auto; padding: 10px 16px 60px; }
 
   section.category{ margin-top: 40px; scroll-margin-top: 70px; }
@@ -239,6 +265,11 @@
   <a href="#boissons">Bières & Thés</a>
   <a href="#vins">Vins</a>
 </nav>
+
+  <div class="menu-tools" aria-label="Rechercher et commander">
+    <div class="search-box"><span aria-hidden="true">⌕</span><input id="menu-search" type="search" placeholder="Rechercher un plat…" autocomplete="off"></div>
+    <button class="cart-button" id="cart-open" type="button">🛒 <span class="cart-label">Commande</span><span class="cart-count" id="cart-count">0</span></button>
+  </div>
 
 <main>
 
@@ -531,6 +562,16 @@
   <p class="developer-signature">Dev by HAZ DEV <span>·</span> <a href="tel:+2290141822730">+229 01 41 82 27 30</a></p>
 </footer>
 
+<div class="cart-panel" id="cart-panel" role="dialog" aria-modal="true" aria-labelledby="cart-title">
+  <div class="cart-card">
+    <div class="cart-head"><h2 id="cart-title">Ma commande</h2><button class="cart-close" id="cart-close" type="button" aria-label="Fermer">×</button></div>
+    <div id="cart-items"><div class="cart-empty">Cliquez sur un plat pour l’ajouter à la commande.</div></div>
+    <div class="cart-total"><span>Total estimé</span><span id="cart-total">0 FCFA</span></div>
+    <button class="whatsapp-order" id="send-whatsapp" type="button">Envoyer la commande sur WhatsApp</button>
+  </div>
+</div>
+
+
 <script>
   // Reveal sections on scroll
   const sections = document.querySelectorAll('section.category');
@@ -576,6 +617,72 @@
       document.documentElement.setAttribute('data-theme', theme);
     });
   })();
+</script>
+
+<script>
+(() => {
+  const search = document.getElementById('menu-search');
+  const items = [...document.querySelectorAll('.item')];
+  const sections = [...document.querySelectorAll('section.category')];
+  const panel = document.getElementById('cart-panel');
+  const cartItems = document.getElementById('cart-items');
+  const cartCount = document.getElementById('cart-count');
+  const cartTotal = document.getElementById('cart-total');
+  const cart = new Map();
+  const phone = '2290156990318';
+
+  const parsePrice = (el) => {
+    const nums = (el.textContent.match(/[\d ]+/g) || []).map(v => Number(v.replace(/\s/g,''))).filter(Boolean);
+    return nums[0] || 0;
+  };
+  const priceText = (el) => el.textContent.replace(/\s+/g,' ').trim();
+  const render = () => {
+    cartItems.innerHTML = '';
+    if (!cart.size) { cartItems.innerHTML = '<div class="cart-empty">Cliquez sur un plat pour l’ajouter à la commande.</div>'; }
+    let count = 0, total = 0;
+    cart.forEach((entry, key) => {
+      count += entry.qty; total += entry.price * entry.qty;
+      const row = document.createElement('div'); row.className = 'cart-row';
+      row.innerHTML = `<span class="cart-row-name">${entry.name}</span><strong>${entry.display}</strong><span class="qty-controls"><button data-action="minus" data-key="${key}">−</button><span>${entry.qty}</span><button data-action="plus" data-key="${key}">+</button></span>`;
+      cartItems.appendChild(row);
+    });
+    cartCount.textContent = count; cartTotal.textContent = total.toLocaleString('fr-FR') + ' FCFA';
+    items.forEach(item => item.classList.toggle('added', cart.has(item.dataset.key)));
+  };
+  items.forEach((item, index) => {
+    const name = item.querySelector('.item-name')?.textContent.replace(/\s+/g,' ').trim() || 'Plat';
+    const price = item.querySelector('.item-price');
+    item.dataset.key = 'item-' + index;
+    item.dataset.search = name.toLowerCase();
+    item.addEventListener('click', () => {
+      const old = cart.get(item.dataset.key);
+      cart.set(item.dataset.key, {name, price:parsePrice(price), display:priceText(price), qty:old ? old.qty + 1 : 1});
+      render();
+    });
+  });
+  search?.addEventListener('input', () => {
+    const q = search.value.trim().toLowerCase(); let visible = 0;
+    sections.forEach(section => {
+      const sectionItems = [...section.querySelectorAll('.item')]; let sectionVisible = 0;
+      sectionItems.forEach(item => { const match = !q || item.dataset.search.includes(q); item.style.display = match ? '' : 'none'; if (match) sectionVisible++; });
+      section.style.display = sectionVisible ? '' : 'none'; visible += sectionVisible;
+    });
+    document.querySelectorAll('.subgroup-title').forEach(title => { title.style.display = q ? 'none' : ''; });
+    document.querySelectorAll('.cat-sub').forEach(sub => { sub.style.display = q ? 'none' : ''; });
+  });
+  document.getElementById('cart-open')?.addEventListener('click', () => panel.classList.add('open'));
+  document.getElementById('cart-close')?.addEventListener('click', () => panel.classList.remove('open'));
+  panel?.addEventListener('click', e => { if (e.target === panel) panel.classList.remove('open'); });
+  cartItems?.addEventListener('click', e => { const btn=e.target.closest('button[data-key]'); if (!btn) return; const entry=cart.get(btn.dataset.key); if (!entry) return; entry.qty += btn.dataset.action === 'plus' ? 1 : -1; if(entry.qty <= 0) cart.delete(btn.dataset.key); render(); });
+  document.getElementById('send-whatsapp')?.addEventListener('click', () => {
+    if (!cart.size) return alert('Ajoutez au moins un plat à votre commande.');
+    let msg = 'Bonjour JP Chawarma,\n\nJe souhaite commander :\n'; let total = 0;
+    cart.forEach(entry => { msg += `- ${entry.qty} × ${entry.name} — ${entry.display}\n`; total += entry.price * entry.qty; });
+    msg += `\nTotal estimé : ${total.toLocaleString('fr-FR')} FCFA\n\nMerci.`;
+    window.open('https://wa.me/' + phone + '?text=' + encodeURIComponent(msg), '_blank');
+  });
+  render();
+})();
 </script>
 </body>
 </html>
